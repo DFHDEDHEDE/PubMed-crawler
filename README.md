@@ -7,7 +7,7 @@ Here we take deepseek-r1:8b from ollama as an example for it is open source and 
 Please note that sometimes AI may give wrong results or simply no response. If you do not want to use generative AI, answer 'F' when asked if you want to use AI to screen the articles and the results would be calculated just by keyword frequency, the same as crawler 2. You may compared the results generated in different modes to decide which to use.\
 
 In crawler 2 and 3, when the program is launched:\
-*** "Enter your PubMed search URL: " requires you to first enter your search terms into the PubMed website and copy the URL like 'https://pubmed.ncbi.nlm.nih.gov/?term=cold'.\
+*** "Enter your PubMed search URL: " requires you to first enter your search terms into the PubMed website and copy the URL like 'https://pubmed.ncbi.nlm.nih.gov/?term=cold'. \
 *** "Number of papers to retrieve: " means the number of articles you want to get.\
 *** "Do you want to use AI to screen the articles (T) or not (F): " allows you to choose if you want to use AI to screen the results. Answer 'T' if you want to. This request only appears in crawler 3.\
 *** If you choose to use AI, then "Enter your description: " means you can enter your description about what kind of articles you want to get. Because generative AI is used for this, you may enter your description in a quite personalized way unlike convensional search terms, but it should still be clear in meanings. You can even submit your requirements in various languages, just make sure that it can be understood by AI.\
