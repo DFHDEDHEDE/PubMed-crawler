@@ -1,17 +1,23 @@
 # PubMed-crawler
-PubMed crawler is a python program that can screen articles on PubMed by calculating keyword frequency or using generative AI to pick out articles that suits your description. It might be useful when you try to get all the articles according to your description when writing a review or something.\
-PubMed crawler 1 is the earliest version of this program. It shows the core logic of going through all the titles and abstracts to calculate keyword frequency and rank them. It has only the most basic function of ranking and showing results and often suffer from PubMed website no responding.\
-Based on these fundament logic, PubMed crawler 2 added a delay mechanism to prevent website requests from being too frequent as well as a siries of code optimization. It also has aprogress bar and can save results to a csv file. Coding is assisted by DeepSeek.\
-From crawler 2 to 3, we added support from local AI which can help screen articles. We kept all the functions in PubMed crawler 2 while users can choose to use local generative AI model to help judge if an article suits the description depending on the title and abstract, hoping to give a result better than simply counting keyword frequency.\
-Here we take deepseek-r1:8b from ollama as an example for it is open source and can run on PC. You may switch to other open source models or online generative AI in different languages. In this example, make sure your ollama application is on before you run the program.\
-Please note that sometimes AI may give wrong results or simply no response. If you do not want to use generative AI, answer 'F' when asked if you want to use AI to screen the articles and the results would be calculated just by keyword frequency, the same as crawler 2. You may compared the results generated in different modes to decide which to use.\
+  PubMed crawler is a python program that can screen articles on PubMed by calculating keyword frequency or using generative AI to pick out articles that suits your description. It might be useful when you try to get all the articles according to your description when writing a review or something.\
+  PubMed crawler 1 is the earliest version of this program. It shows the core logic of going through all the titles and abstracts to calculate keyword frequency and rank them. It has only the most basic function of ranking and showing results and often suffer from PubMed website no responding.\
+  Based on these fundament logic, PubMed crawler 2 added a delay mechanism to prevent website requests from being too frequent as well as a siries of code optimization. It also has aprogress bar and can save results to a csv file. Coding is assisted by DeepSeek.\
+  From crawler 2 to 3, we added support from local AI which can help screen articles. We kept all the functions in PubMed crawler 2 while users can choose to use local generative AI model to help judge if an article suits the description depending on the title and abstract, hoping to give a result better than simply counting keyword frequency.\
+  Here we take deepseek-r1:8b from ollama as an example for it is open source and can run on PC. You may switch to other open source models or online generative AI in different languages. In this example, make sure your ollama application is on before you run the program.\
+  Please note that sometimes AI may give wrong results or simply no response. If you do not want to use generative AI, answer 'F' when asked if you want to use AI to screen the articles and the results would be calculated just by keyword frequency, the same as crawler 2. You may compared the results generated in different modes to decide which to use.\
 
-In crawler 2 and 3, when the program is launched:\
+  In crawler 2 and 3, when the program is launched:\
 *** "Enter your PubMed search URL: " requires you to first enter your search terms into the PubMed website and copy the URL like 'https://pubmed.ncbi.nlm.nih.gov/?term=cold'. \
+
 *** "Number of papers to retrieve: " means the number of articles you want to get.\
+
 *** "Do you want to use AI to screen the articles (T) or not (F): " allows you to choose if you want to use AI to screen the results. Answer 'T' if you want to. This request only appears in crawler 3.\
+
 *** If you choose to use AI, then "Enter your description: " means you can enter your description about what kind of articles you want to get. Because generative AI is used for this, you may enter your description in a quite personalized way unlike convensional search terms, but it should still be clear in meanings. You can even submit your requirements in various languages, just make sure that it can be understood by AI.\
+
 *** If you choose not to use AI, you would directly come to the step "Number of keywords: " without being asked to enter your description.\
+
 *** "Number of keywords: " refers to the keywords whose frequency in titles and abstracts would be calculated as the ranking criteria. In crawler 2 keyword frequency rasnking would be directly printed while in AI mode keyword frequency is used for rough screening and three times the required number of articles would be kept and further analysed by AI model to finally get the desired number of articles.\
+
 *** "Enter keyword x: " requires you to enter the keywords you want to use in calculating frequency.\
-After these, click enter to start screening. Progress bar would be shown in terminal and you would get a list of articles with PMID, title, abstract and keyword frequency.You can also adjust the code to export the results to a csv file.\
+  After these, click enter to start screening. Progress bar would be shown in terminal and you would get a list of articles with PMID, title, abstract and keyword frequency.You can also adjust the code to export the results to a csv file.\
