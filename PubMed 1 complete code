@@ -1,0 +1,73 @@
+import urllib.request, urllib.parse, urllib.error
+import re
+from bs4 import BeautifulSoup
+import ssl
+
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
+
+website = input('Enter your website: ', )
+papernum = input('Num of papers: ', )
+numofpapers = int(papernum)
+keywordnum = input('Num of key words: ', )
+numofkeyword = int(keywordnum)
+i = 0
+x = 0
+totalcount = dict()
+keywords = dict()
+keywordcount = dict()
+freq = dict()
+papernum = 0
+data = list()
+
+while i < numofkeyword:
+    keywords[i] = input('Enter key word '+str(i+1)+': ', )
+    i = i + 1
+
+while True:
+    x = x + 1
+    y = str(x)
+    rwebsite = website + '&page=' + y
+    print(rwebsite)
+    fhand = urllib.request.urlopen(rwebsite).read()
+    links = re.findall(b'href="(/\d\d\d\d\d\d\d\d/)"', fhand)
+    if len(links) == 0:
+        print('Done')
+        break
+
+    for link in links:
+        subwebsite = 'https://pubmed.ncbi.nlm.nih.gov' + link.decode()
+        print(subwebsite)
+        information = dict()
+        papernum = papernum + 1
+        totalcount[papernum] = 0
+        keywordcount[papernum] = 0
+        html = urllib.request.urlopen(subwebsite).read()
+        soup = BeautifulSoup(html, 'html.parser')
+        test = re.findall(b'em class="empty-abstract"', html)
+        if len(test) != 0:
+            print('No abstract available')
+            freq[papernum] = 0
+            continue
+        else:
+            abstract = soup.p.string
+            if abstract == None:
+                print('Abstract error')
+                freq[papernum] = 0
+                continue
+            else:
+                words = abstract.split()
+                totalcount[papernum] = len(words)
+                i = 0
+                while i < numofkeyword:
+                    keywordcount[papernum] = keywordcount[papernum] + abstract.count(keywords[i])
+                    i = i + 1
+                freq[papernum] = keywordcount[papernum] / totalcount[papernum]
+                print(freq[papernum])
+        information['PMID'] = link.decode()
+        information['freq'] = freq[papernum]
+        data.append(information)
+
+sorted_data = sorted(data, key=lambda x: x['freq'], reverse=True)
+print(sorted_data[:numofpapers])
