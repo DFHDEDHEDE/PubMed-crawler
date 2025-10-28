@@ -1,0 +1,214 @@
+import requests
+from bs4 import BeautifulSoup
+import re
+import time
+import pandas as pd
+from urllib.parse import urljoin
+from tqdm import tqdm
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
+def get_user_input():
+    """获取用户输入参数"""
+    website = input('Enter your PubMed search URL: ')
+    num_papers = int(input('Number of papers to retrieve: '))
+    num_keywords = int(input('Number of keywords: '))
+
+    keywords = []
+    for i in range(num_keywords):
+        keyword = input(f'Enter keyword {i + 1}: ')
+        keywords.append(keyword)
+
+    return website, num_papers, keywords
+
+
+def fetch_page(url, retries=3, delay=2):
+    """发送HTTP请求并获取页面内容"""
+    for attempt in range(retries):
+        try:
+            response = requests.get(url)
+            response.raise_for_status()  # 检查请求是否成功
+            return response.text
+        except requests.RequestException as e:
+            logger.error(f"Request error ({attempt + 1}/{retries}): {e}")
+            if attempt < retries - 1:
+                time.sleep(delay * (2 ** attempt))  # 指数退避
+    logger.error(f"Failed to fetch {url} after {retries} attempts")
+    return None
+
+
+def extract_paper_links(html_content):
+    """从搜索结果页面提取论文链接"""
+    if not html_content:
+        return []
+
+    soup = BeautifulSoup(html_content, 'html.parser')
+    links = []
+
+    # 使用CSS选择器代替正则表达式
+    for link in soup.select('a.docsum-title'):
+        href = link.get('href')
+        if href:
+            links.append(urljoin('https://pubmed.ncbi.nlm.nih.gov', href))
+
+    return links
+
+
+def extract_title(html_content):
+    """从论文页面提取标题"""
+    if not html_content:
+        return None
+
+    soup = BeautifulSoup(html_content, 'html.parser')
+
+    # 尝试多种可能的标题选择器
+    title_element = soup.select_one('.heading-title')
+    if not title_element:
+        title_element = soup.select_one('h1.article-title')
+    if not title_element:
+        title_element = soup.select_one('h1')
+
+    if title_element:
+        return title_element.get_text(strip=True)
+    else:
+        return "Title not found"
+
+
+def extract_abstract(html_content):
+    """从论文页面提取摘要"""
+    if not html_content:
+        return None
+
+    soup = BeautifulSoup(html_content, 'html.parser')
+    abstract_element = soup.select_one('.abstract-content')
+
+    if not abstract_element:
+        # 尝试备用选择器
+        abstract_element = soup.select_one('.abstract')
+
+    if abstract_element:
+        return abstract_element.get_text(strip=True)
+    else:
+        return None
+
+
+def analyze_text(text, keywords):
+    """分析文本中的关键词频率"""
+    if not text:
+        return 0, 0, 0
+
+    total_words = len(text.split())
+    keyword_matches = 0
+
+    for keyword in keywords:
+        keyword_matches += text.lower().count(keyword.lower())
+
+    frequency = keyword_matches / total_words if total_words > 0 else 0
+    return total_words, keyword_matches, frequency
+
+def get_paper_count_bs(html_content):
+    """
+    使用 BeautifulSoup 提取论文总数
+    """
+    soup = BeautifulSoup(html_content, 'html.parser')
+    
+    # 查找 meta 标签
+    meta_tag = soup.find('meta', {'name': 'log_resultcount'})
+    
+    if meta_tag:
+        count = meta_tag.get('content')
+        return int(count) if count else None
+    else:
+        return None
+
+def main():
+    base_url, num_papers, keywords = get_user_input()
+    papers_data = []
+    page_number = 1
+    papers_fetched = 0
+    base_url_content = fetch_page(base_url)
+    total_count = get_paper_count_bs(base_url_content)
+
+    with tqdm(total=total_count, desc="Fetching papers") as pbar:
+        while papers_fetched < total_count:
+            page_url = f"{base_url}&page={page_number}"
+            logger.info(f"Fetching page {page_number}: {page_url}")
+
+            page_content = fetch_page(page_url)
+            if not page_content:
+                break
+
+            paper_links = extract_paper_links(page_content)
+            if not paper_links:
+                logger.info("No more papers found")
+                break
+
+            for link in paper_links:
+                if papers_fetched >= total_count:
+                    break
+
+                paper_content = fetch_page(link)
+                if not paper_content:
+                    continue
+
+                title = extract_title(paper_content)
+                abstract = extract_abstract(paper_content)
+
+                # 分别分析标题和摘要
+                title_words, title_matches, title_freq = analyze_text(title, keywords)
+                abstract_words, abstract_matches, abstract_freq = analyze_text(abstract, keywords)
+
+                # 计算综合频率 (加权平均)
+                combined_freq = (title_freq * 0.4 + abstract_freq * 0.6) if (title_freq + abstract_freq) > 0 else 0
+
+                pmid_match = re.search(r'/(\d+)/', link)
+                pmid = pmid_match.group(1) if pmid_match else "Unknown"
+
+                papers_data.append({
+                    'PMID': pmid,
+                    'URL': link,
+                    'Title': title,
+                    'Abstract': abstract[:200] + '...' if abstract else "Abstract not available",
+                    'TitleWords': title_words,
+                    'TitleMatches': title_matches,
+                    'TitleFrequency': title_freq,
+                    'AbstractWords': abstract_words,
+                    'AbstractMatches': abstract_matches,
+                    'AbstractFrequency': abstract_freq,
+                    'CombinedFrequency': combined_freq
+                })
+
+                papers_fetched += 1
+                pbar.update(1)
+
+                # 避免请求过于频繁
+                time.sleep(0.5)
+
+            page_number += 1
+            # 控制总页数，防止无限循环
+            if page_number > 100:
+                logger.warning("Reached maximum page limit")
+                break
+
+    # 结果排序和展示
+    if papers_data:
+        df = pd.DataFrame(papers_data)
+        df = df.sort_values(by='CombinedFrequency', ascending=False).reset_index(drop=True)
+
+        print("\nTop papers by combined keyword frequency:")
+        print(df.head(num_papers)[
+                  ['PMID', 'Title', 'CombinedFrequency', 'TitleFrequency', 'AbstractFrequency', 'Abstract']])
+
+        # 保存完整结果到CSV
+        #df.to_csv('pubmed_results.csv', index=False)
+        #print("\nFull results saved to pubmed_results.csv")
+    else:
+        print("No papers found matching the criteria.")
+
+
+if __name__ == "__main__":
+    main()
